@@ -1417,6 +1417,12 @@ html.dark-mode .moon-icon {
     display: none;
 }
 
+/* Cloudflare 配置部分样式 */
+#cloudflareEmailSection,
+#cloudflareAccountIDSection {
+    display: none;
+}
+
 /* QRCode 容器 */
 .qrcode-container {
     margin: 30px 0;
@@ -2049,21 +2055,47 @@ html.dark-mode .moon-icon {
     <div class="modal" onclick="event.stopPropagation()">
         <button type="button" class="modal-close" onclick="closeCloudflareConfigModal()">×</button>
         <h2 class="subapi-modal-title">☁️ Workers/Pages 可用请求数统计</h2>
+        
+        <!-- 请求方案选择 -->
         <div class="form-group subapi-form-group">
-            <label>API Token</label>
-            <input type="text" id="cloudflareToken" placeholder="输入Cloudflare API Token">
+            <label>请求方案</label>
+            <select id="cloudflareAuthMethod" title="请求方案" onchange="updateCloudflareAuthMethod()">
+                <option value="email">Email + Global API Key</option>
+                <option value="accountid">Account ID + API Token</option>
+            </select>
         </div>
-        <div class="form-group subapi-form-group">
-            <label>Zone ID</label>
-            <input type="text" id="cloudflareZoneID" placeholder="输入Zone ID">
+        
+        <!-- Email + Global API Key 方案 -->
+        <div id="cloudflareEmailSection">
+            <div class="form-group subapi-form-group">
+                <label>Email</label>
+                <input type="text" id="cloudflareEmail" placeholder="输入Cloudflare账户邮箱">
+            </div>
+            <div class="form-group subapi-form-group">
+                <label>Global API Key</label>
+                <input type="password" id="cloudflareGlobalAPIKey" placeholder="输入Global API Key">
+            </div>
         </div>
-        <div class="form-group subapi-form-group">
-            <label>通知阈值 (%)</label>
-            <input type="number" id="cloudflareThreshold" placeholder="输入通知阈值，例如20" min="1" max="100" value="20">
+        
+        <!-- Account ID + API Token 方案 -->
+        <div id="cloudflareAccountIDSection" class="hidden-section">
+            <div class="form-group subapi-form-group">
+                <label>Account ID</label>
+                <input type="text" id="cloudflareAccountID" placeholder="输入Account ID">
+            </div>
+            <div class="form-group subapi-form-group">
+                <label>API Token</label>
+                <input type="password" id="cloudflareAPIToken" placeholder="输入API Token">
+            </div>
         </div>
+        
+        <!-- 验证状态提示 -->
+        <div id="cloudflareStatus" class="subapi-status"></div>
+        
+        <!-- 按钮组 -->
         <div class="subapi-buttons">
             <button type="button" class="btn btn-primary btn-test-api" onclick="testCloudflareConfig()">可用性验证</button>
-            <button type="button" class="btn btn-primary btn-confirm-api" onclick="confirmCloudflareConfig()">保存</button>
+            <button type="button" class="btn btn-primary btn-confirm-api" id="cloudflareConfirmBtn" onclick="confirmCloudflareConfig()" disabled>保存</button>
             <button type="button" class="btn btn-secondary btn-cancel-api" onclick="closeCloudflareConfigModal()">取消</button>
         </div>
     </div>
@@ -3329,54 +3361,216 @@ async function confirmTelegramConfig() {
 // 打开 Cloudflare 配置模态框
 function openCloudflareConfigModal() {
     document.getElementById('cloudflareConfigModal').classList.add('show');
-    // 如果已有配置，加载到输入框
-    if (currentConfig.通知?.Cloudflare) {
-        document.getElementById('cloudflareToken').value = currentConfig.通知?.Cloudflare?.Token || '';
-        document.getElementById('cloudflareZoneID').value = currentConfig.通知?.Cloudflare?.ZoneID || '';
-        document.getElementById('cloudflareThreshold').value = currentConfig.通知?.Cloudflare?.Threshold || '20';
+    
+    // 默认选择第一个方案
+    document.getElementById('cloudflareAuthMethod').value = 'email';
+    updateCloudflareAuthMethod();
+    
+    // 清空输入框
+    document.getElementById('cloudflareEmail').value = '';
+    document.getElementById('cloudflareGlobalAPIKey').value = '';
+    document.getElementById('cloudflareAccountID').value = '';
+    document.getElementById('cloudflareAPIToken').value = '';
+    
+    // 重置状态和保存按钮
+    document.getElementById('cloudflareStatus').style.display = 'none';
+    document.getElementById('cloudflareStatus').textContent = '';
+    document.getElementById('cloudflareConfirmBtn').disabled = true;
+    document.getElementById('cloudflareConfirmBtn').style.opacity = '0.5';
+    document.getElementById('cloudflareConfirmBtn').dataset.testPassed = 'false';
+}
+
+// 更新 Cloudflare 认证方法选择时的显示
+function updateCloudflareAuthMethod() {
+    const method = document.getElementById('cloudflareAuthMethod').value;
+    
+    // 隐藏所有方案的输入框
+    document.getElementById('cloudflareEmailSection').style.display = 'none';
+    document.getElementById('cloudflareAccountIDSection').style.display = 'none';
+    
+    // 显示选中方案的输入框
+    if (method === 'email') {
+        document.getElementById('cloudflareEmailSection').style.display = 'block';
+    } else if (method === 'accountid') {
+        document.getElementById('cloudflareAccountIDSection').style.display = 'block';
     }
+    
+    // 切换方案时重置验证状态和保存按钮
+    document.getElementById('cloudflareStatus').style.display = 'none';
+    document.getElementById('cloudflareStatus').textContent = '';
+    document.getElementById('cloudflareConfirmBtn').disabled = true;
+    document.getElementById('cloudflareConfirmBtn').style.opacity = '0.5';
+    document.getElementById('cloudflareConfirmBtn').dataset.testPassed = 'false';
 }
 
 // 关闭 Cloudflare 配置模态框
 function closeCloudflareConfigModal(event) {
     if (event && event.target.id !== 'cloudflareConfigModal') return;
     document.getElementById('cloudflareConfigModal').classList.remove('show');
+    
+    // 清空输入框和状态
+    document.getElementById('cloudflareEmail').value = '';
+    document.getElementById('cloudflareGlobalAPIKey').value = '';
+    document.getElementById('cloudflareAccountID').value = '';
+    document.getElementById('cloudflareAPIToken').value = '';
+    document.getElementById('cloudflareStatus').style.display = 'none';
+    document.getElementById('cloudflareStatus').textContent = '';
 }
 
 // 测试 Cloudflare 连接
-function testCloudflareConfig() {
-    const token = document.getElementById('cloudflareToken').value.trim();
-    const zoneID = document.getElementById('cloudflareZoneID').value.trim();
+async function testCloudflareConfig() {
+    const method = document.getElementById('cloudflareAuthMethod').value;
+    let email = '', globalAPIKey = '', accountID = '', apiToken = '';
     
-    if (!token || !zoneID) {
-        showToast('请填写API Token和Zone ID', 'error');
-        return;
+    const statusEl = document.getElementById('cloudflareStatus');
+    const confirmBtn = document.getElementById('cloudflareConfirmBtn');
+    const testBtn = event.target;
+    
+    // 根据选择的方案获取输入值
+    if (method === 'email') {
+        email = document.getElementById('cloudflareEmail').value.trim();
+        globalAPIKey = document.getElementById('cloudflareGlobalAPIKey').value.trim();
+        
+        if (!email || !globalAPIKey) {
+            statusEl.textContent = '❌ 请填写 Email 和 Global API Key';
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'linear-gradient(135deg, #ef4444 0, #dc2626 100%)';
+            statusEl.style.color = '#fff';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            confirmBtn.dataset.testPassed = 'false';
+            return;
+        }
+    } else if (method === 'accountid') {
+        accountID = document.getElementById('cloudflareAccountID').value.trim();
+        apiToken = document.getElementById('cloudflareAPIToken').value.trim();
+        
+        if (!accountID || !apiToken) {
+            statusEl.textContent = '❌ 请填写 Account ID 和 API Token';
+            statusEl.style.display = 'block';
+            statusEl.style.background = 'linear-gradient(135deg, #ef4444 0, #dc2626 100%)';
+            statusEl.style.color = '#fff';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            confirmBtn.dataset.testPassed = 'false';
+            return;
+        }
     }
     
-    showToast('✅ Cloudflare 配置有效 (测试模式)', 'success');
+    try {
+        testBtn.disabled = true;
+        statusEl.textContent = '⏳ 检测中...';
+        statusEl.style.display = 'block';
+        statusEl.style.background = 'linear-gradient(135deg, #3b82f6 0, #1d4ed8 100%)';
+        statusEl.style.color = '#fff';
+        
+        // 构建请求 URL
+        let queryParams = new URLSearchParams();
+        if (method === 'email') {
+            queryParams.append('Email', email);
+            queryParams.append('GlobalAPIKey', globalAPIKey);
+        } else if (method === 'accountid') {
+            queryParams.append('AccountID', accountID);
+            queryParams.append('APIToken', apiToken);
+        }
+        
+        const response = await fetch('/admin/getCloudflareUsage?' + queryParams.toString());
+        
+        if (!response.ok) {
+            throw new Error('请求失败 (HTTP ' + response.status + ')');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // 验证成功
+            statusEl.style.background = 'linear-gradient(135deg, #10b981 0, #059669 100%)';
+            statusEl.textContent = `✅ 验证成功！Pages: ${data.pages}, Workers: ${data.workers}, 总计: ${data.total}`;
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.dataset.testPassed = 'true';
+            
+            // 保存验证通过的数据供后续保存使用
+            confirmBtn.dataset.method = method;
+            confirmBtn.dataset.email = email;
+            confirmBtn.dataset.globalAPIKey = globalAPIKey;
+            confirmBtn.dataset.accountID = accountID;
+            confirmBtn.dataset.apiToken = apiToken;
+        } else {
+            // 验证失败
+            statusEl.style.background = 'linear-gradient(135deg, #ef4444 0, #dc2626 100%)';
+            statusEl.textContent = '❌ 验证失败：凭证无效或无权限';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            confirmBtn.dataset.testPassed = 'false';
+        }
+    } catch (error) {
+        statusEl.style.background = 'linear-gradient(135deg, #ef4444 0, #dc2626 100%)';
+        statusEl.textContent = '❌ 检测失败: ' + error.message;
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.5';
+        confirmBtn.dataset.testPassed = 'false';
+    } finally {
+        testBtn.disabled = false;
+    }
 }
 
 // 保存 Cloudflare 配置
-function confirmCloudflareConfig() {
-    const token = document.getElementById('cloudflareToken').value.trim();
-    const zoneID = document.getElementById('cloudflareZoneID').value.trim();
-    const threshold = parseInt(document.getElementById('cloudflareThreshold').value) || 20;
+async function confirmCloudflareConfig() {
+    const confirmBtn = document.getElementById('cloudflareConfirmBtn');
     
-    if (!token || !zoneID) {
-        showToast('请填写完整的API Token和Zone ID', 'error');
+    // 检查是否通过了验证
+    if (confirmBtn.dataset.testPassed !== 'true') {
+        showToast('请先点击"可用性验证"按钮通过验证', 'error');
         return;
     }
     
-    if (threshold < 1 || threshold > 100) {
-        showToast('通知阈值必须在1-100之间', 'error');
-        return;
+    const method = confirmBtn.dataset.method;
+    const email = confirmBtn.dataset.email || '';
+    const globalAPIKey = confirmBtn.dataset.globalAPIKey || '';
+    const accountID = confirmBtn.dataset.accountID || '';
+    const apiToken = confirmBtn.dataset.apiToken || '';
+    
+    try {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '保存中...';
+        
+        // 构建请求体
+        const payload = {
+            Email: method === 'email' ? email : null,
+            GlobalAPIKey: method === 'email' ? globalAPIKey : null,
+            AccountID: method === 'accountid' ? accountID : null,
+            APIToken: method === 'accountid' ? apiToken : null
+        };
+        
+        // 提交到后端
+        const response = await fetch('/admin/cf.json', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            showToast('✅ Cloudflare 配置已保存', 'success');
+            closeCloudflareConfigModal();
+            
+            // 1秒后刷新页面
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            const errorData = await response.json();
+            showToast('❌ 保存失败: ' + (errorData.error || '未知错误'), 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '保存';
+        }
+    } catch (error) {
+        showToast('❌ 保存失败: ' + error.message, 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '保存';
     }
-    
-    if (!currentConfig.通知) currentConfig.通知 = {};
-    currentConfig.通知.Cloudflare = { Token: token, ZoneID: zoneID, Threshold: threshold };
-    
-    markModified('notification');
-    closeCloudflareConfigModal();
 }
 
 // 保存通知设置
