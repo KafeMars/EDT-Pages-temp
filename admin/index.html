@@ -2020,9 +2020,10 @@ html.dark-mode .moon-icon {
             <label>Chat ID</label>
             <input type="text" id="telegramChatID" placeholder="输入Chat ID">
         </div>
+        <div id="telegramStatus" class="subapi-status"></div>
         <div class="subapi-buttons">
             <button type="button" class="btn btn-primary btn-test-api" onclick="testTelegramConfig()">可用性验证</button>
-            <button type="button" class="btn btn-primary btn-confirm-api" onclick="confirmTelegramConfig()">确定</button>
+            <button type="button" class="btn btn-primary btn-confirm-api" id="telegramConfirmBtn" onclick="confirmTelegramConfig()" disabled>保存</button>
             <button type="button" class="btn btn-secondary btn-cancel-api" onclick="closeTelegramConfigModal()">取消</button>
         </div>
     </div>
@@ -2047,7 +2048,7 @@ html.dark-mode .moon-icon {
         </div>
         <div class="subapi-buttons">
             <button type="button" class="btn btn-primary btn-test-api" onclick="testCloudflareConfig()">可用性验证</button>
-            <button type="button" class="btn btn-primary btn-confirm-api" onclick="confirmCloudflareConfig()">确定</button>
+            <button type="button" class="btn btn-primary btn-confirm-api" onclick="confirmCloudflareConfig()">保存</button>
             <button type="button" class="btn btn-secondary btn-cancel-api" onclick="closeCloudflareConfigModal()">取消</button>
         </div>
     </div>
@@ -3163,12 +3164,16 @@ function confirmSubAPI() {
 // 打开 TelegramBot 配置模态框
 function openTelegramConfigModal() {
     document.getElementById('telegramConfigModal').classList.add('show');
-    // 如果已有配置，加载到输入框
-    // 兼容两种config结构：TG 或 通知.Telegram
-    const botToken = currentConfig.TG?.BotToken || currentConfig.通知?.Telegram?.BotToken || '';
+    // 只加载Chat ID，不加载Bot Token（因为Bot Token是敏感信息）
     const chatID = currentConfig.TG?.ChatID || currentConfig.通知?.Telegram?.ChatID || '';
-    document.getElementById('telegramBotToken').value = botToken;
+    document.getElementById('telegramBotToken').value = '';
     document.getElementById('telegramChatID').value = chatID;
+    
+    // 重置状态和保存按钮
+    document.getElementById('telegramStatus').style.display = 'none';
+    document.getElementById('telegramStatus').textContent = '';
+    document.getElementById('telegramConfirmBtn').disabled = true;
+    document.getElementById('telegramConfirmBtn').style.opacity = '0.5';
 }
 
 // 关闭 TelegramBot 配置模态框
@@ -3178,39 +3183,103 @@ function closeTelegramConfigModal(event) {
 }
 
 // 测试 TelegramBot 连接
-function testTelegramConfig() {
+async function testTelegramConfig() {
     const token = document.getElementById('telegramBotToken').value.trim();
     const chatID = document.getElementById('telegramChatID').value.trim();
+    const statusEl = document.getElementById('telegramStatus');
+    const confirmBtn = document.getElementById('telegramConfirmBtn');
+    const testBtn = event.target;
     
     if (!token || !chatID) {
-        showToast('请填写Bot Token和Chat ID', 'error');
+        statusEl.textContent = '❌ 请填写Bot Token和Chat ID';
+        statusEl.style.display = 'block';
+        statusEl.style.background = 'linear-gradient(135deg, #ef4444 0, #dc2626 100%)';
+        statusEl.style.color = '#fff';
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.5';
         return;
     }
     
-    showToast('✅ TelegramBot 配置有效 (测试模式)', 'success');
+    try {
+        testBtn.disabled = true;
+        statusEl.textContent = '⏳ 验证中...';
+        statusEl.style.display = 'block';
+        statusEl.style.background = 'linear-gradient(135deg, #3b82f6 0, #1d4ed8 100%)';
+        statusEl.style.color = '#fff';
+        
+        // 第一步：验证 Bot Token 的有效性
+        const getUrlParams = new URLSearchParams({
+            access_token: token
+        });
+        const getMeUrl = `https://api.telegram.org/bot${token}/getMe`;
+        
+        const getMeResponse = await fetch(getMeUrl);
+        if (!getMeResponse.ok) {
+            throw new Error('Bot Token 无效，无法获取机器人信息');
+        }
+        
+        const getMeData = await getMeResponse.json();
+        if (!getMeData.ok) {
+            throw new Error('Bot Token 无效: ' + (getMeData.description || '未知错误'));
+        }
+        
+        // 第二步：通过Bot Token向Chat ID推送测试消息
+        const sendUrlParams = new URLSearchParams({
+            chat_id: chatID,
+            text: '✅ Telegram 通知配置已验证成功！'
+        });
+        const sendUrl = `https://api.telegram.org/bot${token}/sendMessage?${sendUrlParams}`;
+        
+        const sendResponse = await fetch(sendUrl);
+        if (!sendResponse.ok) {
+            throw new Error('发送消息失败，请检查Chat ID是否正确');
+        }
+        
+        const sendData = await sendResponse.json();
+        if (!sendData.ok) {
+            throw new Error('Chat ID 无效: ' + (sendData.description || '未知错误'));
+        }
+        
+        // 验证成功
+        statusEl.style.background = 'linear-gradient(135deg, #10b981 0, #059669 100%)';
+        statusEl.textContent = '✅ Bot Token 和 Chat ID 均有效';
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        
+    } catch (error) {
+        statusEl.style.background = 'linear-gradient(135deg, #ef4444 0, #dc2626 100%)';
+        statusEl.textContent = '❌ 验证失败: ' + error.message;
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.5';
+    } finally {
+        testBtn.disabled = false;
+    }
 }
 
 // 保存 TelegramBot 配置
 function confirmTelegramConfig() {
     const token = document.getElementById('telegramBotToken').value.trim();
     const chatID = document.getElementById('telegramChatID').value.trim();
+    const confirmBtn = document.getElementById('telegramConfirmBtn');
     
-    if (!token && !chatID) {
-        // 如果都为空，则认为是禁用
-        if (!currentConfig.TG) currentConfig.TG = {};
-        currentConfig.TG.BotToken = '';
-        currentConfig.TG.ChatID = '';
-    } else if (token && chatID) {
-        if (!currentConfig.TG) currentConfig.TG = {};
-        currentConfig.TG.BotToken = token;
-        currentConfig.TG.ChatID = chatID;
-    } else {
+    // 检查按钮是否禁用（必须先通过验证）
+    if (confirmBtn.disabled) {
+        showToast('请先点击"可用性验证"按钮验证配置', 'error');
+        return;
+    }
+    
+    if (!token || !chatID) {
         showToast('请填写完整的Bot Token和Chat ID', 'error');
         return;
     }
     
+    if (!currentConfig.TG) currentConfig.TG = {};
+    currentConfig.TG.BotToken = token;
+    currentConfig.TG.ChatID = chatID;
+    
     markModified('notification');
     closeTelegramConfigModal();
+    showToast('✅ TelegramBot 配置已保存', 'success');
 }
 
 // 打开 Cloudflare 配置模态框
