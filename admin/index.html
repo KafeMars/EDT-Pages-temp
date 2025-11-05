@@ -3085,7 +3085,7 @@
                 <div class="api-form-row">
                     <label>API URL:</label>
                     <input type="text" id="apiOptimizeURL" placeholder="输入API接口URL" title="API接口URL"
-                        oninput="autoConvertGitHubURL()">
+                        oninput="autoConvertGitHubURL(); autoDetectPortFromURL()">
                 </div>
             </div>
 
@@ -4967,6 +4967,28 @@
             }
         }
 
+        // 自动检测URL中的port参数并填充到默认端口字段
+        function autoDetectPortFromURL() {
+            const urlInput = document.getElementById('apiOptimizeURL').value.trim();
+            const portInput = document.getElementById('apiOptimizePort');
+
+            if (!urlInput) return;
+
+            try {
+                const urlObj = new URL(urlInput);
+                const portParam = urlObj.searchParams.get('port');
+                
+                if (portParam) {
+                    // 检测到port参数，验证并规范化
+                    const normalizedPort = validateAndNormalizePort(portParam);
+                    portInput.value = normalizedPort;
+                }
+            } catch (error) {
+                // URL格式错误，忽略
+                console.log('URL格式检查失败:', error);
+            }
+        }
+
         // 可用性验证
         async function verifyAPIOptimize() {
             let urlInput = document.getElementById('apiOptimizeURL').value.trim();
@@ -4990,13 +5012,41 @@
                 return;
             }
 
-            // 规范化端口
-            const normalizedPort = validateAndNormalizePort(portInput);
+            // 检测和提取URL中的port参数
+            let detectedPort = null;
+            let cleanURL = urlInput;
+            
+            try {
+                const urlObj = new URL(urlInput);
+                const portParam = urlObj.searchParams.get('port');
+                
+                if (portParam) {
+                    // 识别到port参数
+                    detectedPort = validateAndNormalizePort(portParam);
+                    
+                    // 移除port参数
+                    urlObj.searchParams.delete('port');
+                    cleanURL = urlObj.toString();
+                    
+                    // 更新URL输入框（移除port参数）
+                    document.getElementById('apiOptimizeURL').value = cleanURL;
+                    
+                    // 更新端口输入框
+                    document.getElementById('apiOptimizePort').value = detectedPort;
+                    
+                    showToast(`✅ 已自动识别URL中的端口号: ${detectedPort}，并已移除port参数`, 'success');
+                }
+            } catch (error) {
+                console.log('URL port参数提取失败:', error);
+            }
+
+            // 规范化端口（如果没有从URL中检测到端口，则使用输入框中的值）
+            const normalizedPort = detectedPort || validateAndNormalizePort(portInput);
             document.getElementById('apiOptimizePort').value = normalizedPort;
 
-            // 构建完整URL
-            const separator = urlInput.includes('?') ? '&' : '?';
-            const completeURL = `${urlInput}${separator}port=${normalizedPort}`;
+            // 使用清理后的URL构建完整URL
+            const separator = cleanURL.includes('?') ? '&' : '?';
+            const completeURL = `${cleanURL}${separator}port=${normalizedPort}`;
 
             // URL编码
             const encodedURL = encodeURIComponent(completeURL);
@@ -5041,12 +5091,21 @@
 
         // 追加API到自定义优选地址
         function appendAPIToCustom() {
-            const urlInput = document.getElementById('apiOptimizeURL').value.trim();
+            let urlInput = document.getElementById('apiOptimizeURL').value.trim();
             const portInput = document.getElementById('apiOptimizePort').value.trim();
 
             if (!urlInput) {
                 alert('请输入API URL');
                 return;
+            }
+
+            // 移除URL中可能存在的port参数
+            try {
+                const urlObj = new URL(urlInput);
+                urlObj.searchParams.delete('port');
+                urlInput = urlObj.toString();
+            } catch (error) {
+                console.log('URL处理失败:', error);
             }
 
             // 构建完整URL
