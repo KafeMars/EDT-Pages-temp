@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>管理后台</title>
-    <script src="https://cdn.jsdelivr.net/npm/@keeex/qrcodejs-kx@1.0.2/qrcode.min.js"></script>
+    <script data-cfasync="false" src="https://cdn.jsdelivr.net/npm/@keeex/qrcodejs-kx@1.0.2/qrcode.min.js"></script>
     <style>
         /* 基础重置 */
         * {
@@ -3117,7 +3117,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false">
         let currentConfig = {};
         let originalConfig = {};
         let modifiedSections = new Set();
@@ -3154,7 +3154,15 @@
 
         async function loadConfig() {
             try {
-                const response = await fetch('/admin/config.json?t=' + Date.now());
+                // 禁用 Rocket Loader 对该请求的影响
+                const response = await fetch('/admin/config.json?_t=' + Date.now(), {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (!response.ok) throw new Error('加载配置失败');
                 currentConfig = await response.json();
                 originalConfig = JSON.parse(JSON.stringify(currentConfig));
@@ -3306,7 +3314,13 @@
             textarea.value = '正在加载...';
 
             try {
-                const response = await fetch('/admin/ADD.txt?t=' + Date.now());
+                const response = await fetch('/admin/ADD.txt?_t=' + Date.now(), {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (response.ok) {
                     textarea.value = await response.text();
                 } else {
@@ -3848,7 +3862,12 @@
             try {
                 const response = await fetch('/admin/config.json', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    },
                     body: JSON.stringify(currentConfig)
                 });
 
@@ -4077,7 +4096,13 @@
         // 加载最近8条日志
         async function loadLogs() {
             try {
-                const response = await fetch('/admin/log.json?t=' + Date.now());
+                const response = await fetch('/admin/log.json?_t=' + Date.now(), {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (!response.ok) throw new Error('加载日志失败');
                 const logs = await response.json();
                 logsLoaded = true;
@@ -4130,7 +4155,13 @@
         // 显示全部日志
         async function showAllLogs() {
             try {
-                const response = await fetch('/admin/log.json?t=' + Date.now());
+                const response = await fetch('/admin/log.json?_t=' + Date.now(), {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 if (!response.ok) throw new Error('加载日志失败');
                 const logs = await response.json();
 
@@ -5164,7 +5195,7 @@
             detectionBox.innerHTML = '<div class="ip-detection-info">正在检测您的网络环境...</div>';
 
             try {
-                const response = await fetch(`https://speed.cloudflare.com/cdn-cgi/trace?t=${Date.now()}`);
+                const response = await fetch(`https://speed.cloudflare.com/cdn-cgi/trace?_t=${Date.now()}`);
                 const text = await response.text();
                 console.log('[在线优选] 检测响应:', text);
 
@@ -5540,7 +5571,7 @@
 
                 // 转换IP为16进制
                 const hexIP = ipToHex(ip);
-                const testUrl = `https://${hexIP}.nip.lfree.org:${port}/cdn-cgi/trace?t=${Date.now()}`;
+                const testUrl = `https://${hexIP}.nip.lfree.org:${port}/cdn-cgi/trace?_t=${Date.now()}`;
 
                 // 测试3次，取后2次平均值
                 const times = [];
