@@ -820,11 +820,11 @@
             --input-border: #e5e7eb;
             --overlay-bg: rgba(255, 255, 255, 0.7);
             --blur-overlay: rgba(0, 0, 0, 0.3);
-            --latency-90: #10b981;
-            --latency-150: #f59e0b;
-            --latency-250: #ef4444;
-            --latency-omg: #dc2626;
-            --destructive: #dc2626
+            --latency-49: #25a077;
+            --latency-99: #4ebb4e;
+            --latency-299: #f59e0b;
+            --latency-999: #ef4444;
+            --latency-1000: #dc2626;
         }
 
         html.dark-mode {
@@ -4818,10 +4818,11 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
         // 获取延迟颜色
         function getLatencyColor(latency) {
             if (latency === -1) return 'var(--destructive)';
-            if (latency <= 90) return 'var(--latency-90)';
-            if (latency <= 150) return 'var(--latency-150)';
-            if (latency <= 250) return 'var(--latency-250)';
-            return 'var(--latency-omg)';
+            if (latency <= 49) return 'var(--latency-49)';
+            if (latency <= 99) return 'var(--latency-99)';
+            if (latency <= 299) return 'var(--latency-299)';
+            if (latency <= 999) return 'var(--latency-999)';
+            return 'var(--latency-1000)';
         }
 
         // 更新延迟显示
@@ -4882,11 +4883,15 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 const siteName = site.name.toLowerCase().replace(/\s+/g, '-');
                 const latencies = [];
 
-                // 10次测试并发执行
+                // 10次测试，每个间隔500ms
                 for (let i = 0; i < 10; i++) {
                     const latency = await testLatency(site);
                     latencies.push(latency);
                     updateLatencyDisplay(siteName, latencies);
+                    // 除了最后一次测试外，每次后延迟500ms
+                    if (i < 9) {
+                        await new Promise(resolve => setTimeout(resolve, 382));
+                    }
                 }
             });
 
