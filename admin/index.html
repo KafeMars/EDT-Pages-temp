@@ -5406,20 +5406,68 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             const content = document.getElementById('network-module-content');
             const icon = titleEl.querySelector('.collapse-icon');
 
-            if (content.style.display === 'none' || !content.style.display) {
+            // If a transition is currently attached, remove it to avoid duplicate handlers
+            if (content._transitionHandler) {
+                content.removeEventListener('transitionend', content._transitionHandler);
+                content._transitionHandler = null;
+            }
+
+            const isHidden = content.style.display === 'none' || getComputedStyle(content).display === 'none';
+
+            if (isHidden) {
                 // Expand - show latency tests and start testing
                 content.style.display = 'block';
+                content.style.maxHeight = '0px';
+                content.style.opacity = '0';
+                
+                requestAnimationFrame(() => {
+                    const height = content.scrollHeight;
+                    content.style.maxHeight = height + 'px';
+                    content.style.opacity = '1';
+                });
+
                 if (icon) {
                     icon.style.transform = 'rotate(0deg)';
                 }
+
+                const onEnd = function (e) {
+                    if (e.propertyName === 'max-height') {
+                        // Clear fixed max-height so content can grow/shrink naturally
+                        content.style.maxHeight = '';
+                        content.removeEventListener('transitionend', onEnd);
+                        content._transitionHandler = null;
+                    }
+                };
+                content._transitionHandler = onEnd;
+                content.addEventListener('transitionend', onEnd);
+
                 // 生成卡片并开始测试
                 startLatencyTest();
             } else {
                 // Collapse - hide latency tests
-                content.style.display = 'none';
+                const height = content.scrollHeight;
+                // Ensure starting height is set
+                content.style.maxHeight = height + 'px';
+                content.style.opacity = '1';
+                // Force reflow
+                content.getBoundingClientRect();
+                // Animate to 0
+                content.style.maxHeight = '0px';
+                content.style.opacity = '0';
+
                 if (icon) {
                     icon.style.transform = 'rotate(90deg)';
                 }
+
+                const onEnd = function (e) {
+                    if (e.propertyName === 'max-height') {
+                        content.style.display = 'none';
+                        content.removeEventListener('transitionend', onEnd);
+                        content._transitionHandler = null;
+                    }
+                };
+                content._transitionHandler = onEnd;
+                content.addEventListener('transitionend', onEnd);
             }
         }
 
