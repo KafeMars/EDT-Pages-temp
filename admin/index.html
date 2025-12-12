@@ -3877,7 +3877,7 @@
                         <div class="latency-cards" id="latency-cards">
                             <!-- 卡片将通过JavaScript动态生成 -->
                         </div>
-                        <small style="font-size: 12px; color: #9ca3af; margin-top: 6px; display: block;">💡 更多测试项目，可前往
+                        <small style="font-size: 12px; color: #9ca3af; margin-top: 6px; display: block;">💡<b>更多测试项目</b>，可前往
                             <a href="https://ip.skk.moe/" target="_blank" rel="noopener"
                                 style="font-weight: bold; color: #6b7280;">ip.skk.moe</a> 自行测试。
                         </small>
@@ -4162,9 +4162,9 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                                 <input type="text" id="proxyIP" title="PROXYIP" placeholder="proxyip.cmliussss.net"
                                     onchange="processProxyIP()" oninput="processProxyIP()">
                                 <div class="checkbox-group">
-                                    <input type="checkbox" id="autoProxy" title="启用自动获取"
+                                    <input type="checkbox" id="autoProxy" title="启用自动获取: 使用默认内置的PROXYIP"
                                         onchange="toggleAutoProxy(); markModified('proxy')">
-                                    <label for="autoProxy" class="checkbox-label">启用自动获取</label>
+                                    <label for="autoProxy" class="checkbox-label" title="启用自动获取: 使用默认内置的PROXYIP">启用自动获取</label>
                                 </div>
                             </div>
                         </div>
@@ -4181,9 +4181,9 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                                         placeholder="user:password@127.0.0.1:1080" readonly class="subapi-input">
                                 </div>
                                 <div class="checkbox-group">
-                                    <input type="checkbox" id="globalSocks5" title="启用全局代理"
+                                    <input type="checkbox" id="globalSocks5" title="启用全局代理: 将非CFCDN站点的流量也走SOCKS5代理"
                                         onchange="markModified('proxy')">
-                                    <label for="globalSocks5" class="checkbox-label">启用全局代理</label>
+                                    <label for="globalSocks5" class="checkbox-label" title="启用全局代理: 将非CFCDN站点的流量也走SOCKS5代理">启用全局代理</label>
                                 </div>
                             </div>
                         </div>
@@ -4199,9 +4199,9 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                                         placeholder="user:password@127.0.0.1:8080" readonly class="subapi-input">
                                 </div>
                                 <div class="checkbox-group">
-                                    <input type="checkbox" id="globalHTTP" title="启用全局代理"
+                                    <input type="checkbox" id="globalHTTP" title="启用全局代理: 将非CFCDN站点的流量也走HTTP代理"
                                         onchange="markModified('proxy')">
-                                    <label for="globalHTTP" class="checkbox-label">启用全局代理</label>
+                                    <label for="globalHTTP" class="checkbox-label" title="启用全局代理: 将非CFCDN站点的流量也走HTTP代理">启用全局代理</label>
                                 </div>
                             </div>
                         </div>
@@ -5022,7 +5022,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             }
 
             if (avgLatency === -1) {
-                valueElement.textContent = '-ms';
+                valueElement.textContent = '--ms';
                 valueElement.style.color = 'var(--destructive)';
             } else {
                 valueElement.textContent = `${Math.round(avgLatency)}ms`;
