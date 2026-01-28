@@ -6342,7 +6342,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             const nodeHostInput = document.getElementById('nodeHost');
             if (hasMultipleHosts) {
                 // 如果存在 HOSTS 数组，用逗号连接显示所有 host
-                nodeHostInput.value = currentConfig.HOSTS.join(',');
+                nodeHostInput.value = currentConfig.HOSTS.join('、');
                 // 添加可点击样式和事件
                 nodeHostInput.classList.add('nodeHost-clickable');
                 nodeHostInput.title = '点击 可编辑多个节点域名';
@@ -7409,7 +7409,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             currentConfig.HOSTS = items;
 
             // 更新输入框显示（用逗号连接）
-            nodeHostInput.value = items.join(',');
+            nodeHostInput.value = items.join('、');
 
             // 关闭模态框
             closeHostsEditModal();
