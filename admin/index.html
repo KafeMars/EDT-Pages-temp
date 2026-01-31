@@ -676,30 +676,53 @@
             transition: all 0.3s ease;
         }
 
-        /* 移动设备上变为上下布局 */
+        /* 移动设备上变为上下布局 - 当屏幕宽度小于等于768px时生效 */
         @media (max-width: 768px) {
+            /* SOCKS5和HTTP弹窗的主容器样式调整 */
             #exploreSocks5Modal .modal,
             #exploreHTTPModal .modal {
+                /* 改为上下排列方式（竖直方向） */
                 flex-direction: column;
+                /* 最大高度：浏览器可视区高度 - 100px（为顶部导航栏和按钮留出空间） */
                 max-height: calc(100vh - 200px);
+                /* 设置实际高度为最大高度，充分利用屏幕空间 */
                 height: calc(100vh - 200px);
             }
 
+            /* 地图区域样式 - 放在上半部分 */
             .modal-map-side {
+                /* flex: 1 表示占用所有剩余空间 */
                 flex: 1;
+                /* 高度自动计算 */
                 height: auto;
-                min-height: 300px;
+                /* 最小高度180px，防止地图太小 */
+                min-height: 180px;
+                /* 宽度铺满整个宽度 */
                 width: 100%;
             }
 
+            /* 内容区域样式 - 放在下半部分（地区和代理选择、按钮） */
             .modal-content-side {
+                /* flex: 0 0 auto 表示不伸缩，只占用内容所需高度 */
                 flex: 0 0 auto;
+                /* 取消最大高度限制，让内容自适应 */
                 max-height: none;
+                /* 内边距 */
                 padding: 20px;
+                /* 移除左边框（因为已不是左右并排） */
                 border-left: none;
+                /* 内容超过时垂直滚动 */
                 overflow-y: auto;
             }
         }
+
+        /* 
+        调整指南：
+        1. 减小地图高度？改 min-height 值（如改为180px让地图更紧凑）
+        2. 增加地图高度？改 min-height 值（如改为250px给地图更多空间）
+        3. 整个弹窗太高？改 calc(100vh - 100px) 中的100，改成150让弹窗更小
+        4. 整个弹窗太矮？改 calc(100vh - 100px) 中的100，改成50让弹窗更大
+        */
 
         html.dark-mode .modal-content-side {
             background: var(--bg-secondary, #1a1a1a);
