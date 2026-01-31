@@ -12162,8 +12162,16 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 proxyMaps[type].marker = L.marker([lat, lng]).addTo(map);
             }
 
-            // 平滑移动地图并缩中心 - 进一步降低缩放级别到 4 以查看更多范围
-            map.flyTo([lat, lng], 4, {
+            // 平滑移动地图 - 将标记点定位到地图的下方60%位置，避免气泡被遮挡
+            map.setZoom(4);
+            
+            // 计算偏移后的中心点，使标记显示在视图的60%处（下方）
+            const mapSize = map.getSize();
+            const offsetY = mapSize.y * 0.2; // 向上偏移20%，使标记显示在60%处
+            const point = map.project([lat, lng], 4).subtract([0, offsetY]);
+            const offsetCenter = map.unproject(point, 4);
+            
+            map.flyTo(offsetCenter, 4, {
                 duration: 1.5
             });
 
