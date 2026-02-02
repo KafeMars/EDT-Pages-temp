@@ -2139,34 +2139,29 @@
 
         @media (max-width: 768px) {
             .api-buttons {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
                 gap: 10px;
                 margin-top: 20px;
             }
 
             .btn-verify-api {
-                grid-column: 1;
-                grid-row: 1;
-                flex: 1;
+                grid-column: 1 / -1 !important;
+                grid-row: 1 !important;
             }
 
             .btn-append-api {
-                grid-column: 2;
-                grid-row: 1;
-                flex: 1;
+                grid-column: 1 !important;
+                grid-row: 2 !important;
             }
 
             .btn-close-api {
-                grid-column: 1;
-                grid-row: 2;
-                flex: 1;
+                grid-column: 2 !important;
+                grid-row: 2 !important;
             }
 
             .btn-append-results {
-                grid-column: 2;
-                grid-row: 2;
-                flex: 1;
+                display: none !important;
             }
         }
 
@@ -5900,7 +5895,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
     <!-- 代理验证模态框 -->
     <div class="modal-overlay" id="proxyVerificationModal">
-        <div class="modal" id="proxyVerificationContent" style="min-width: 450px;" onclick="event.stopPropagation()">
+        <div class="modal" id="proxyVerificationContent" onclick="event.stopPropagation()">
             <button type="button" class="modal-close" onclick="closeProxyVerificationModal()">×</button>
 
             <h2 id="proxyVerificationTitle"
@@ -5917,18 +5912,20 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 style="margin-bottom: 20px; padding: 12px; border-radius: 8px; display: none; font-size: 14px;">
             </div>
 
-            <div class="api-buttons" style="display: flex; gap: 10px; justify-content: space-between;">
-                <button type="button" class="btn btn-verify-api" onclick="verifyProxyAvailability()" style="flex: 1;">
+            <div class="api-buttons" style="gap: 10px; justify-content: space-between;">
+                <button type="button" class="btn btn-verify-api" onclick="verifyProxyAvailability()">
                     可用性验证
                 </button>
                 <button type="button" class="btn btn-append-api" id="proxyConfirmBtn" onclick="confirmProxyAddress()"
-                    style="flex: 1; opacity: 0.5;" disabled>
+                    style="opacity: 0.5;" disabled>
                     确定
                 </button>
-                <button type="button" class="btn btn-close-api" onclick="closeProxyVerificationModal()"
-                    style="flex: 1;">
+                <button type="button" class="btn btn-close-api" onclick="closeProxyVerificationModal()">
                     取消
                 </button>
+            </div>
+                <!-- 用于移动端布局的占位符 -->
+                <div class="btn-append-results" style="display: none;"></div>
             </div>
         </div>
     </div>
