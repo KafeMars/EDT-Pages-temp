@@ -3675,8 +3675,8 @@
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -3687,8 +3687,8 @@
 
         .ip-detail-content {
             background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 24px;
             max-width: 900px;
@@ -3965,6 +3965,7 @@
         /* Map Popup Styling */
         .leaflet-popup-content-wrapper {
             background: rgba(255, 255, 255, 0.8) !important;
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border-radius: 12px !important;
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -3980,6 +3981,7 @@
 
         .leaflet-popup-tip {
             background: rgba(255, 255, 255, 0.8) !important;
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
         }
 
@@ -9224,7 +9226,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                                 </div>
                                 <div style="background: rgba(0,0,0,0.15); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); min-width: 0;">
                                     <div style="font-size: 10px; opacity: 0.7; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; text-align: center;">落地地址 (IP)</div>
-                                    <div style="font-family: 'Fira Code', monospace; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; color: #fff; text-decoration: underline; min-width: 0;" onclick="showIpDetailForProxy('${ip}')">
+                                    <div style="font-family: 'Fira Code', monospace; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; color: #fff; text-decoration: underline; min-width: 0;" onclick="showIpDetailForProxy('${ip}', this)">
                                         <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${ip}">${ip}</span>
                                         <span style="font-size: 12px; opacity: 0.8; flex-shrink: 0;">🔍</span>
                                     </div>
@@ -9317,15 +9319,56 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             statusEl.style.color = '#fff';
         }
 
-        function showIpDetailForProxy(ip) {
-            // 异步获取 IP 详情
-            fetch(`https://api.ipapi.is/?ip=${ip}`)
-                .then(response => response.json())
-                .then(data => showIpDetailModal(data))
-                .catch(error => {
-                    showToast('❌ 查询IP详细信息失败');
-                    console.error('IP查询错误:', error);
-                });
+        async function fetchAndShowIpDetail(ip, targetElement = null) {
+            // 将 * 替换为 0 (兼容掩码IP)
+            const cleanIp = ip.toString().replace(/\*/g, '0');
+
+            if (targetElement) {
+                // 移除可能存在的加载动画
+                const existingSpinner = targetElement.querySelector('.loading-spinner');
+                if (existingSpinner) {
+                    return; // 正在加载中,不重复请求
+                }
+
+                // 添加加载动画
+                const spinner = document.createElement('span');
+                spinner.className = 'loading-spinner';
+                targetElement.appendChild(spinner);
+            }
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+
+                let response;
+                try {
+                    response = await fetch(`https://api.ipapi.is/?ip=${cleanIp}`, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if (!response.ok) throw new Error('Primary API failed');
+                } catch (e) {
+                    console.warn('Primary IP API failed, trying fallback...', e);
+                    // 备用 API
+                    response = await fetch(`https://api.ipapi.cmliussss.net/?ip=${cleanIp}`);
+                    if (!response.ok) throw new Error('Fallback API failed');
+                }
+
+                const data = await response.json();
+
+                // 显示详情弹窗
+                showIpDetailModal(data);
+            } catch (error) {
+                showToast('❌ 查询IP详细信息失败');
+                console.error('IP查询错误:', error);
+            } finally {
+                if (targetElement) {
+                    const spinner = targetElement.querySelector('.loading-spinner');
+                    if (spinner) spinner.remove();
+                }
+            }
+        }
+
+        function showIpDetailForProxy(ip, element = null) {
+            fetchAndShowIpDetail(ip, element);
         }
 
         function confirmProxyAddress() {
@@ -11742,60 +11785,15 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 // 添加可点击样式
                 element.classList.add('clickable');
 
-                element.addEventListener('click', async function () {
+                element.addEventListener('click', function () {
                     let ipText = this.textContent.trim();
-
-                    // 移除可能存在的加载动画
-                    const existingSpinner = this.querySelector('.loading-spinner');
-                    if (existingSpinner) {
-                        return; // 正在加载中,不重复请求
-                    }
 
                     // 跳过显示"加载中..."或"未知"的元素
                     if (ipText === '加载中...' || ipText === '未知') {
                         return;
                     }
 
-                    // 将 * 替换为 0
-                    const cleanIp = ipText.replace(/\*/g, '0');
-
-                    // 添加加载动画
-                    const spinner = document.createElement('span');
-                    spinner.className = 'loading-spinner';
-                    this.appendChild(spinner);
-
-                    try {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-
-                        let response;
-                        try {
-                            response = await fetch(`https://api.ipapi.is/?ip=${cleanIp}`, { signal: controller.signal });
-                            clearTimeout(timeoutId);
-                            if (!response.ok) throw new Error('Primary API failed');
-                        } catch (e) {
-                            console.warn('Primary IP API failed, trying fallback...', e);
-                            // 备用 API
-                            response = await fetch(`https://api.ipapi.cmliussss.net/?ip=${cleanIp}`);
-                            if (!response.ok) throw new Error('Fallback API failed');
-                        }
-
-                        const data = await response.json();
-
-                        // 移除加载动画
-                        spinner.remove();
-
-                        // 显示详情弹窗
-                        showIpDetailModal(data);
-
-                    } catch (error) {
-                        // 移除加载动画
-                        spinner.remove();
-
-                        // 显示错误提示
-                        showToast('❌ 查询IP详细信息失败');
-                        console.error('IP查询错误:', error);
-                    }
+                    fetchAndShowIpDetail(ipText, this);
                 });
             });
         }
