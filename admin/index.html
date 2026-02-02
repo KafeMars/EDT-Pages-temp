@@ -1886,14 +1886,25 @@
 
         @media(max-width:768px) {
             .module-footer {
-                flex-direction: column;
+                flex-wrap: wrap;
                 align-items: flex-start;
+                gap: 10px;
+            }
+
+            .module-footer .btn-online-optimize:not(.hidden-section),
+            .module-footer .btn-api-optimize:not(.hidden-section) {
+                flex: 1;
+                min-width: calc(50% - 5px);
             }
 
             .module-footer .btn-group {
-                margin-left: auto;
-                width: auto;
-                align-self: flex-end;
+                width: 100%;
+                display: flex;
+                gap: 10px;
+            }
+
+            .module-footer .btn-group .btn {
+                flex: 1;
             }
 
             .module-footer .btn-ech-help,
