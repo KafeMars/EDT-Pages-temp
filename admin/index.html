@@ -9573,6 +9573,31 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     font-family: var(--mono);
                 }
 
+                .country-cell {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    min-width: 0;
+                    max-width: 100%;
+                }
+
+                .country-flag {
+                    width: 20px;
+                    height: 14px;
+                    flex: 0 0 auto;
+                    border-radius: 2px;
+                    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.14);
+                    object-fit: cover;
+                    background: #ffffff;
+                }
+
+                .country-code {
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
                 .empty {
                     padding: 26px 12px;
                     color: var(--muted);
@@ -10120,7 +10145,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                                                     data-sort="type">优选类型 <span class="sort-mark"
                                                         data-sort-mark="type"></span></button></th>
                                             <th style="width: 14%"><button class="sort-header" type="button"
-                                                    data-sort="country">国家 <span class="sort-mark"
+                                                    data-sort="country">国家/地区 <span class="sort-mark"
                                                         data-sort-mark="country"></span></button></th>
                                             <th style="width: 14%"><button class="sort-header" type="button"
                                                     data-sort="latency">延迟(ms) <span class="sort-mark"
@@ -10971,7 +10996,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
           <td class="ip-cell">${escapeHtml(item.address)}</td>
           <td>${escapeHtml(item.ipType || "未知")}</td>
           <td>${escapeHtml(item.type)}</td>
-          <td>${escapeHtml(item.country)}</td>
+          <td>${renderCountryCell(item.country)}</td>
           <td>${item.latency}ms</td>
           <td>${renderSpeedCell(item, index)}</td>
         </tr>`;
@@ -11170,6 +11195,15 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     if (item.speedState === "failed") return '<span class="tag bad">失败</span>';
                     if (item.speedState === "stopped") return '<span class="muted">测速已停止</span>';
                     return `<button class="link-btn" type="button" data-speed-index="${index}">待测试</button>`;
+                }
+
+                function renderCountryCell(country) {
+                    const text = String(country || "未知").trim() || "未知";
+                    const countryCode = /^[a-zA-Z]{2}$/.test(text) ? text.toLowerCase() : "";
+                    const flag = countryCode
+                        ? `<img class="country-flag" src="https://ipdata.co/flags/${countryCode}.png" alt="" loading="lazy" onerror="this.remove()">`
+                        : "";
+                    return `<span class="country-cell">${flag}<span class="country-code">${escapeHtml(text)}</span></span>`;
                 }
 
                 function prepareCandidates(rawText, limit, preferredPort) {
