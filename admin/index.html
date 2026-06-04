@@ -9456,6 +9456,47 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     box-shadow: 0 10px 24px rgba(15, 159, 110, 0.16);
                 }
 
+                #saveSelectedBtn.is-save-easter-shaking {
+                    animation: saveSelectedButtonShake 0.32s ease-in-out infinite;
+                    box-shadow: 0 0 0 4px rgba(15, 159, 110, 0.18), 0 14px 30px rgba(15, 159, 110, 0.24);
+                    transform-origin: center;
+                }
+
+                #saveSelectedBtn.is-save-locked {
+                    cursor: not-allowed;
+                    opacity: 0.56;
+                }
+
+                #saveSelectedBtn.is-save-locked:not(.is-save-easter-shaking):hover {
+                    background: var(--green);
+                    box-shadow: none;
+                    transform: none;
+                }
+
+                @keyframes saveSelectedButtonShake {
+
+                    0%,
+                    100% {
+                        transform: translateX(0) rotate(0deg);
+                    }
+
+                    20% {
+                        transform: translateX(-2px) rotate(-2deg);
+                    }
+
+                    40% {
+                        transform: translateX(2px) rotate(2deg);
+                    }
+
+                    60% {
+                        transform: translateX(-2px) rotate(-1.5deg);
+                    }
+
+                    80% {
+                        transform: translateX(2px) rotate(1.5deg);
+                    }
+                }
+
                 .icon-btn {
                     display: inline-grid;
                     width: 38px;
@@ -10630,6 +10671,8 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     { label: "AS209242列表v6", family: "ipv6", url: "https://raw.githubusercontent.com/ipverse/asn-ip/master/as/209242/ipv6-aggregated.txt" }
                 ];
                 const LIBRARY_SELECTION_CACHE_KEY = "bestcf:selected-ip-library";
+                const SAVE_EASTER_SHAKE_DELAY_MS = 618;
+                const SAVE_EASTER_EXPORT_DELAY_MS = 1000;
 
                 const state = {
                     ipv4: null,
@@ -10647,6 +10690,8 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     sort: { key: "latency", dir: "asc" },
                     resultSelectionDrag: null,
                     suppressResultClick: false,
+                    saveEasterHold: null,
+                    suppressNextSaveClick: false,
                     preferredLibraryKey: ""
                 };
 
@@ -10790,7 +10835,18 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     els.selectAllBtn.addEventListener("click", selectAllResults);
                     els.invertSelectBtn.addEventListener("click", invertSelectedResults);
                     els.clearSelectBtn.addEventListener("click", clearSelectedResults);
-                    els.saveSelectedBtn.addEventListener("click", saveSelectedResults);
+                    els.saveSelectedBtn.addEventListener("pointerdown", startSaveSelectedLongPress);
+                    els.saveSelectedBtn.addEventListener("pointerup", finishSaveSelectedLongPress);
+                    els.saveSelectedBtn.addEventListener("pointercancel", finishSaveSelectedLongPress);
+                    els.saveSelectedBtn.addEventListener("lostpointercapture", finishSaveSelectedLongPress);
+                    els.saveSelectedBtn.addEventListener("click", (event) => {
+                        if (state.suppressNextSaveClick) {
+                            state.suppressNextSaveClick = false;
+                            event.preventDefault();
+                            return;
+                        }
+                        saveSelectedResults();
+                    });
                     els.closeBestCFBtn.addEventListener("click", closeBestCFModule);
                     els.networkWarningConfirmBtn.addEventListener("click", confirmNetworkWarning);
                     document.querySelectorAll("[data-sort]").forEach((button) => {
@@ -11646,13 +11702,20 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     const total = state.results.length;
                     const selected = state.selectedIds.size;
                     els.selectionStatus.textContent = `已选 ${selected} 个`;
-                    els.saveSelectedBtn.disabled = selected === 0;
+                    const saveLocked = total > 0 && selected === 0;
+                    els.saveSelectedBtn.disabled = total === 0;
+                    els.saveSelectedBtn.classList.toggle("is-save-locked", saveLocked);
+                    els.saveSelectedBtn.setAttribute("aria-disabled", (total === 0 || saveLocked) ? "true" : "false");
                     els.selectAllBtn.disabled = total === 0;
                     els.invertSelectBtn.disabled = total === 0;
                     els.clearSelectBtn.disabled = selected === 0;
                     els.selectAllHeader.disabled = total === 0;
                     els.selectAllHeader.checked = total > 0 && selected === total;
                     els.selectAllHeader.indeterminate = selected > 0 && selected < total;
+                    if (total === 0) finishSaveSelectedLongPress();
+                    if (state.saveEasterHold && state.saveEasterHold.shaking && !state.saveEasterHold.exported) {
+                        els.selectionStatus.textContent = "继续按住可导出 CSV";
+                    }
                 }
 
                 function startResultSelectionDrag(event) {
@@ -11791,6 +11854,135 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
                     if (sendSelectedResultsToParent(lines)) return;
                     copySelectedResults(lines);
+                }
+
+                function startSaveSelectedLongPress(event) {
+                    if (event.button !== undefined && event.button !== 0) return;
+                    if (els.saveSelectedBtn.disabled || !state.results.length) return;
+
+                    finishSaveSelectedLongPress({ restoreStatus: false });
+
+                    const hold = {
+                        exported: false,
+                        shaking: false,
+                        shakeTimer: 0,
+                        exportTimer: 0
+                    };
+                    state.saveEasterHold = hold;
+
+                    try {
+                        if (event.pointerId !== undefined && els.saveSelectedBtn.setPointerCapture) {
+                            els.saveSelectedBtn.setPointerCapture(event.pointerId);
+                        }
+                    } catch (error) {
+                        // Pointer capture is only a convenience for touch/mouse movement during the hold.
+                    }
+
+                    hold.shakeTimer = window.setTimeout(() => {
+                        if (state.saveEasterHold !== hold) return;
+                        hold.shaking = true;
+                        state.suppressNextSaveClick = true;
+                        els.saveSelectedBtn.classList.add("is-save-easter-shaking");
+                        els.selectionStatus.textContent = "继续按住可导出 CSV";
+                    }, SAVE_EASTER_SHAKE_DELAY_MS);
+
+                    hold.exportTimer = window.setTimeout(() => {
+                        if (state.saveEasterHold !== hold) return;
+                        hold.exported = true;
+                        state.suppressNextSaveClick = true;
+                        exportOptimizeResultsCsv();
+                        window.clearTimeout(hold.shakeTimer);
+                        window.clearTimeout(hold.exportTimer);
+                        els.saveSelectedBtn.classList.remove("is-save-easter-shaking");
+                    }, SAVE_EASTER_EXPORT_DELAY_MS);
+                }
+
+                function finishSaveSelectedLongPress(options = {}) {
+                    const hold = state.saveEasterHold;
+                    if (!hold) return;
+
+                    window.clearTimeout(hold.shakeTimer);
+                    window.clearTimeout(hold.exportTimer);
+                    els.saveSelectedBtn.classList.remove("is-save-easter-shaking");
+                    state.saveEasterHold = null;
+
+                    if (hold.shaking) state.suppressNextSaveClick = true;
+                    if (hold.shaking) {
+                        window.setTimeout(() => {
+                            state.suppressNextSaveClick = false;
+                        }, 1000);
+                    }
+                    if (hold.shaking && !hold.exported && options.restoreStatus !== false) {
+                        updateSelectionState();
+                    }
+                }
+
+                function exportOptimizeResultsCsv() {
+                    const rows = getSortedResults().map(({ item }) => item);
+                    if (!rows.length) {
+                        els.selectionStatus.textContent = "暂无可导出的结果";
+                        return false;
+                    }
+
+                    const header = ["优选IP", "IP类型", "优选类型", "国家/地区", "数据中心", "延迟(ms)", "速度(Mbps)"];
+                    const csvRows = rows.map((item) => [
+                        item.address || "",
+                        item.ipType || "未知",
+                        item.type || "",
+                        item.country || "未知",
+                        item.colo || "未知",
+                        Number.isFinite(item.latency) ? item.latency : "",
+                        formatSpeedForCsv(item)
+                    ]);
+                    const csv = [header, ...csvRows].map(formatCsvRow).join("\r\n");
+                    downloadTextFile(`bestcf-results-${timestampForFilename()}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
+                    els.selectionStatus.textContent = `已导出 ${rows.length} 个`;
+                    return true;
+                }
+
+                function formatSpeedForCsv(item) {
+                    if (item.speedState === "done") return `${formatSpeedMbps(item.speedMbps)}`;
+                    if (item.speedState === "testing") return "测速中";
+                    if (item.speedState === "failed") return "失败";
+                    if (item.speedState === "stopped") return "测速已停止";
+                    return "待测试";
+                }
+
+                function formatCsvRow(row) {
+                    return row.map(formatCsvCell).join(",");
+                }
+
+                function formatCsvCell(value) {
+                    const text = String(value === null || value === undefined ? "" : value);
+                    const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+                    return /[",\r\n]/.test(safeText) ? `"${safeText.replace(/"/g, '""')}"` : safeText;
+                }
+
+                function timestampForFilename() {
+                    const date = new Date();
+                    const pad = (value) => String(value).padStart(2, "0");
+                    return [
+                        date.getFullYear(),
+                        pad(date.getMonth() + 1),
+                        pad(date.getDate())
+                    ].join("") + "-" + [
+                        pad(date.getHours()),
+                        pad(date.getMinutes()),
+                        pad(date.getSeconds())
+                    ].join("");
+                }
+
+                function downloadTextFile(filename, content, mimeType) {
+                    const blob = new Blob([content], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = "none";
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.setTimeout(() => URL.revokeObjectURL(url), 0);
                 }
 
                 function formatResultForAdmin(item) {
